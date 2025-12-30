@@ -3,11 +3,9 @@ import json
 from typing import Dict, Any, List
 import dashscope
 from dashscope import Generation
-from dotenv import load_dotenv
 from .memory import Memory
 from .tools import AtlasTools
 
-load_dotenv()
 dashscope.api_key = os.getenv('DASHSCOPE_API_KEY')
 
 
@@ -42,6 +40,10 @@ class AtlasBrain:
     ### 网页工具
     11. read_web_content(url) - 读取网页的主要文本内容
     12. list_web_resources(url) - 列出网页引用的所有资源 (CSS, JS, 图片等)
+    
+    ### 位置和天气工具
+    13. get_current_location() - 获取当前设备的地理位置(经纬度)
+    14. get_weather(city: str = None) - 获取指定城市或当前位置的天气. city参数可选,如果未提供,则自动查询当前位置.
 
     ## 重要规则
 
@@ -140,6 +142,8 @@ class AtlasBrain:
             'execute_python': self.tools.execute_python,
             'read_web_content': self.tools.read_web_content,
             'list_web_resources': self.tools.list_web_resources,
+            'get_current_location': self.tools.get_current_location,
+            'get_weather': self.tools.get_weather,
         }
 
         if action in tool_map:

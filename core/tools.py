@@ -1,9 +1,11 @@
 import os
 import shutil
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from .code_executor import CodeExecutor
 from . import web_reader
+from . import location
+from . import weather
 
 
 class AtlasTools:
@@ -30,6 +32,38 @@ class AtlasTools:
     def list_web_resources(self, url: str) -> Dict[str, Any]:
         """列出网页引用的所有资源"""
         return web_reader.list_web_resources(url)
+
+    def get_current_location(self) -> Dict[str, Any]:
+        """获取当前设备的地理位置(经纬度)"""
+        return location.get_current_location()
+
+    def get_weather(self, city: Optional[str] = None) -> Dict[str, Any]:
+        """
+        获取指定城市或当前位置的天气.
+        如果未提供城市,则自动获取当前位置并查询.
+        """
+        adcode_result = None
+        if city:
+            # 1. 根据城市名获取adcode
+            adcode_result = weather.get_city_adcode(city=city)
+        else:
+            # 2. 未提供城市,获取当前位置
+            loc_result = self.get_current_location()
+            if not loc_result.get("success"):
+                return loc_result # 返回定位失败的信息
+            
+            # 3. 根据经纬度获取adcode
+            lat = loc_result.get("latitude")
+            lon = loc_result.get("longitude")
+            adcode_result = weather.get_city_adcode(lat=lat, lon=lon)
+
+        # 4. 根据adcode获取天气
+        if adcode_result and adcode_result.get("success"):
+            adcode = adcode_result.get("adcode")
+            return weather.get_weather_by_adcode(adcode)
+        
+        # 返回获取adcode失败的信息
+        return adcode_result if adcode_result else {"success": False, "message": "无法确定查询天气的城市"}
 
     def create_directory(self, path: str) -> Dict[str, Any]:
         """创建目录"""

@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv() # 在所有其他模块导入前加载 .env 文件
+
 from core.brain import AtlasBrain
 import atexit
 
