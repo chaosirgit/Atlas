@@ -101,9 +101,15 @@ EXECUTOR_SYSTEM_PROMPT = """你是Atlas，一个具有文件系统操作和代�
 12. list_web_resources(url) - 列出网页引用的所有资源 (CSS, JS, 图片等)
 13. web_search(query: str) - 执行网络搜索, 返回一个总结和相关链接
 
+### 知识库工具
+14. remember(key: str, value: str) - 记住一个事实 (键值对). value必须是字符串. 如果需要存储复杂数据, 请将其序列化为JSON字符串(例如: json.dumps(你的数据)).
+15. recall(key) - 回忆一个事实 (通过key)
+16. forget(key) - 忘记一个事实 (通过key)
+17. list_facts() - 列出所有记住的事实
+
 ### 位置和天气工具
-14. get_current_location() - 获取当前设备的地理位置(经纬度)
-15. get_weather(city: str = None) - 获取指定城市或当前位置的天气. city参数可选,如果未提供,则自动查询当前位置.
+18. get_current_location() - 获取当前设备的地理位置(经纬度)
+19. get_weather(city: str = None) - 获取指定城市或当前位置的天气. city参数可选,如果未提供,则自动查询当前位置.
 
 ## 重要规则
 

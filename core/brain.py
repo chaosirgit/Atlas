@@ -181,6 +181,10 @@ class AtlasBrain:
             'read_web_content': self.tools.read_web_content,
             'list_web_resources': self.tools.list_web_resources,
             'web_search': self.tools.web_search,
+            'remember': self.tools.remember,
+            'recall': self.tools.recall,
+            'forget': self.tools.forget,
+            'list_facts': self.tools.list_facts,
             'get_current_location': self.tools.get_current_location,
             'get_weather': self.tools.get_weather,
         }

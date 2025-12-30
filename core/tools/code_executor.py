@@ -51,7 +51,7 @@ class CodeExecutor:
         except SyntaxError as e:
             return False, f"语法错误: {e}"
 
-    @timeout_decorator.timeout(10)
+    @timeout_decorator.timeout(10, use_signals=False)
     def _run_code(self, code: str) -> tuple[str, str]:
         """执行代码并捕获输出"""
         stdout_capture = io.StringIO()

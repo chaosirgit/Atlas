@@ -8,7 +8,7 @@ from .tools import web_reader
 from .tools import location
 from .tools import weather
 from .tools import web_search
-
+from .tools import knowledge
 class AtlasTools:
     """Atlas的工具集"""
 
@@ -37,6 +37,22 @@ class AtlasTools:
     def web_search(self, query: str) -> Dict[str, Any]:
         """执行网络搜索"""
         return web_search.search(query)
+
+    def remember(self, key: str, value: str) -> Dict[str, Any]:
+        """记住一个事实 (键值对)"""
+        return knowledge.remember(key, value)
+
+    def recall(self, key: str) -> Dict[str, Any]:
+        """回忆一个事实 (通过key)"""
+        return knowledge.recall(key)
+
+    def forget(self, key: str) -> Dict[str, Any]:
+        """忘记一个事实 (通过key)"""
+        return knowledge.forget(key)
+
+    def list_facts(self) -> Dict[str, Any]:
+        """列出所有记住的事实"""
+        return knowledge.list_facts()
 
     def get_current_location(self) -> Dict[str, Any]:
         """获取当前设备的地理位置(经纬度)"""
