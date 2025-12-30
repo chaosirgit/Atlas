@@ -1,53 +1,161 @@
 import os
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 import dashscope
 from dashscope import Generation
 from .memory import Memory
 from .tool_manager import AtlasTools
-from .config import SYSTEM_PROMPT
+from .config import PLANNER_SYSTEM_PROMPT, EXECUTOR_SYSTEM_PROMPT
 
 dashscope.api_key = os.getenv('DASHSCOPE_API_KEY')
 
 
 class AtlasBrain:
-    """Atlas的大脑 - 整合千问、记忆和工具"""
+    """
+    Atlas的大脑 - 具备规划和执行能力的AI核心.
+    """
 
     def __init__(self, debug: bool = False):
         self.memory = Memory()
         self.tools = AtlasTools()
-        self.system_prompt = SYSTEM_PROMPT
-        self.debug = debug  # 调试开关
+        self.debug = debug
+
+    def _call_qwen(self, system_prompt: str, user_prompt: str, history: List[Dict] = None) -> str:
+        """通用的千问调用函数"""
+        messages = [{'role': 'system', 'content': system_prompt}]
+        if history:
+            messages.extend(history)
+        messages.append({'role': 'user', 'content': user_prompt})
+
+        if self.debug:
+            print(f"\n{'='*20} QWEN CALL {'='*20}")
+            print(f"SYSTEM: {system_prompt[:100]}...")
+            print(f"USER: {user_prompt}")
+            print(f"{'='*50}\n")
+
+        response = Generation.call(
+            model='qwen3-max',
+            messages=messages,
+            result_format='message'
+        )
+        content = response.output.choices[0].message.content
+        
+        if self.debug:
+            print(f"\n{'='*20} QWEN RESPONSE {'='*20}")
+            print(content)
+            print(f"{'='*52}\n")
+            
+        return content
+
+    def _get_plan(self, user_input: str) -> Union[List[str], str]:
+        """第一步: 让规划师(Planner)分析用户意图并制定计划"""
+        plan_str = self._call_qwen(PLANNER_SYSTEM_PROMPT, user_input)
+        
+        try:
+            # 移除代码块标记
+            if "```json" in plan_str:
+                plan_str = plan_str.split("```json")[1].split("```")[0].strip()
+            
+            plan_json = json.loads(plan_str)
+            return plan_json.get("plan", "simple_task")
+        except Exception as e:
+            if self.debug:
+                print(f"⚠️ 规划解析失败: {e}\n将作为简单任务处理.")
+            return "simple_task"
+
+    def _execute_step(self, instruction: str, context: str = "") -> Dict[str, Any]:
+        """第二步: 让执行者(Executor)根据单步指令调用工具"""
+        # 构建给执行者的prompt, 包含历史执行的上下文
+        user_prompt = f"上下文: {context}\n\n当前任务: {instruction}" if context else f"当前任务: {instruction}"
+
+        # 调用Qwen获取工具调用
+        ai_response = self._call_qwen(EXECUTOR_SYSTEM_PROMPT, user_prompt)
+        
+        # 解析并执行工具
+        tool_calls = self._parse_tool_call(ai_response)
+        
+        if not tool_calls:
+             # 如果没有工具调用, 直接返回AI的文本回复
+            return {"success": True, "message": "无需工具", "output": ai_response}
+
+        results = []
+        for tool_call in tool_calls:
+            tool_result = self._execute_tool(tool_call)
+            results.append(tool_result)
+        
+        # 目前只简单返回第一个工具的结果, 将来可以优化
+        return results[0] 
+
+    def _summarize_results(self, original_task: str, results: List[Dict]) -> str:
+        """第三步: 总结所有执行结果并生成最终回复"""
+        summary_prompt = f"""原始任务: "{original_task}"
+
+我们按计划执行了以下步骤, 并取得了这些结果:
+{json.dumps(results, ensure_ascii=False, indent=2)}
+
+请根据以上信息, 生成一个完整、清晰、友好的最终回复给用户.
+"""
+        final_answer = self._call_qwen("你是一个善于总结的AI助手。", summary_prompt)
+        return final_answer
+
+    def think(self, user_input: str) -> str:
+        """
+        Atlas的核心思考循环: 规划 -> 执行 -> 总结
+        """
+        # 1. 规划
+        print("🤔 正在分析和规划任务...")
+        plan = self._get_plan(user_input)
+        self.memory.add_message('user', user_input)
+
+        # 2. 执行
+        if plan == "simple_task":
+            print("📝 任务简单, 直接执行...")
+            result = self._execute_step(user_input)
+            
+            # 对于简单任务, 如果有工具输出则格式化, 否则直接返回AI回复
+            if result and result.get('output'):
+                 final_answer = result['output']
+            else:
+                 final_answer = "任务已执行, 但无明确输出."
+        else:
+            print(f"🗺️ 好的, 我已经制定了计划, 共 {len(plan)} 步.")
+            step_results = []
+            context = f"原始任务: {user_input}\n"
+
+            for i, step in enumerate(plan):
+                print(f"\n第 {i+1}/{len(plan)} 步: {step}")
+                result = self._execute_step(step, context)
+                
+                # 更新上下文, 为下一步提供信息
+                step_results.append({"step": step, "result": result})
+                context += f"第{i+1}步({step})已完成, 结果: {json.dumps(result, ensure_ascii=False)}\n"
+                print(f"✅ 第 {i+1} 步完成.")
+
+            # 3. 总结
+            print("\n✅ 所有步骤已完成, 正在总结最终结果...")
+            final_answer = self._summarize_results(user_input, step_results)
+
+        self.memory.add_message('assistant', final_answer)
+        return final_answer
 
     def _parse_tool_call(self, response: str) -> List[Dict[str, Any]]:
-        """解析AI返回的工具调用（支持多个）"""
+        """解析AI返回的工具调用"""
         try:
             # 先尝试提取代码块中的JSON
             if "```json" in response:
                 json_str = response.split("```json")[1].split("```")[0].strip()
-            elif "```" in response:
-                json_str = response.split("```")[1].split("```")[0].strip()
             else:
-                # 🔥 新增：如果没有代码块，尝试直接解析整个回复
+                # 尝试直接解析整个回复
                 json_str = response.strip()
-
             tool_calls = json.loads(json_str)
-
-            # 确保返回的是列表
-            if isinstance(tool_calls, dict):
-                return [tool_calls]
-            elif isinstance(tool_calls, list):
-                return tool_calls
-            else:
-                return None
-        except Exception as e:
+            return [tool_calls] if isinstance(tool_calls, dict) else tool_calls
+        except Exception:
             return None
 
     def _execute_tool(self, tool_call: Dict[str, Any]) -> Dict[str, Any]:
-        """执行工具调用"""
+        """执行具体的工具调用"""
         action = tool_call.get('action')
         params = tool_call.get('parameters', {})
-
         tool_map = {
             'create_directory': self.tools.create_directory,
             'delete_directory': self.tools.delete_directory,
@@ -64,90 +172,8 @@ class AtlasBrain:
             'get_current_location': self.tools.get_current_location,
             'get_weather': self.tools.get_weather,
         }
-
         if action in tool_map:
+            if self.debug:
+                print(f"🔧 执行工具: {action} ({params})")
             return tool_map[action](**params)
-        else:
-            return {"success": False, "message": f"未知工具: {action}"}
-
-    def think(self, user_input: str) -> str:
-        """主思考函数 - 处理用户输入并返回响应"""
-        # 添加用户消息到记忆
-        self.memory.add_message('user', user_input)
-
-        # 构建消息列表（包含相关的长期记忆）
-        messages = [{'role': 'system', 'content': self.system_prompt}]
-        messages.extend(self.memory.format_for_qwen(include_long_term=True, query=user_input))
-
-        # 调用千问
-        response = Generation.call(
-            model='qwen3-max',
-            messages=messages,
-            result_format='message'
-        )
-
-        ai_response = response.output.choices[0].message.content
-
-        if self.debug:
-            print(f"\n{'=' * 50}")
-            print(f"[DEBUG] AI原始回复:\n{ai_response}")
-            print(f"{'=' * 50}\n")
-
-        # 检查是否需要执行工具
-        tool_calls = self._parse_tool_call(ai_response)
-
-        if self.debug:
-            print(f"[DEBUG] 解析到的工具调用: {tool_calls}\n")
-
-        if tool_calls:
-            # 执行所有工具
-            results = []
-            thoughts = []
-
-            for tool_call in tool_calls:
-                thought = tool_call.get('thought', '')
-                thoughts.append(thought)
-                tool_result = self._execute_tool(tool_call)
-                results.append(tool_result)
-
-                if self.debug:
-                    print(f"[DEBUG] 执行 {tool_call.get('action')}: {tool_result}\n")
-
-            # 将工具执行结果反馈给AI
-            feedback = f"工具执行结果: {json.dumps(results, ensure_ascii=False)}"
-            self.memory.add_message('assistant', ai_response)
-            self.memory.add_message('system', feedback)
-
-            # 让AI根据工具结果生成最终回复
-            messages = [{'role': 'system', 'content': self.system_prompt}]
-            messages.extend(self.memory.format_for_qwen(include_long_term=False))
-
-            final_response = Generation.call(
-                model='qwen3-max',
-                messages=messages,
-                result_format='message'
-            )
-
-            final_answer = final_response.output.choices[0].message.content
-            self.memory.add_message('assistant', final_answer)
-
-            # 格式化输出
-            thoughts_str = "\n".join([f"  {i + 1}. {t}" for i, t in enumerate(thoughts)])
-            results_str = "\n".join([f"  {i + 1}. {r['message']}" for i, r in enumerate(results)])
-
-            return f"💭 思考:\n{thoughts_str}\n\n🔧 执行:\n{results_str}\n\n✅ {final_answer}"
-        else:
-            # 普通对话
-            self.memory.add_message('assistant', ai_response)
-            return ai_response
-
-
-    def get_memory_summary(self) -> str:
-        """获取记忆摘要"""
-        convs = self.memory.get_all_conversations()
-        return f"共有 {len(convs)} 条对话记录"
-
-
-    def clear_memory(self):
-        """清空记忆"""
-        self.memory.clear_memory()
+        return {"success": False, "message": f"未知工具: {action}"}
