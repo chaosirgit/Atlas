@@ -5,13 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="bb8fcd5e-745a-4577-8518-f286d5a7aced" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/atlas_workspace/memory/embeddings.npy" beforeDir="false" afterPath="$PROJECT_DIR$/atlas_workspace/memory/embeddings.npy" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/atlas_workspace/memory/long_term_memory.json" beforeDir="false" afterPath="$PROJECT_DIR$/atlas_workspace/memory/long_term_memory.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/atlas_workspace/memory/short_term_memory.json" beforeDir="false" afterPath="$PROJECT_DIR$/atlas_workspace/memory/short_term_memory.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/brain.py" beforeDir="false" afterPath="$PROJECT_DIR$/core/brain.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/core/tools.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -116,6 +112,6 @@
     <option name="version" value="3" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/Atlas$main.coverage" NAME="main 覆盖结果" MODIFIED="1767130728032" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Atlas$main.coverage" NAME="main 覆盖结果" MODIFIED="1767131492781" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

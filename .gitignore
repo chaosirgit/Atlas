@@ -8,3 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Atlas memory files
+atlas_workspace/memory/short_term_memory.json
+atlas_workspace/memory/long_term_memory.json
+atlas_workspace/memory/embeddings.npy
