@@ -38,6 +38,10 @@ class AtlasBrain:
 
     ### 代码执行工具
     10. execute_python(code) - 执行Python代码
+    
+    ### 网页工具
+    11. read_web_content(url) - 读取网页的主要文本内容
+    12. list_web_resources(url) - 列出网页引用的所有资源 (CSS, JS, 图片等)
 
     ## 重要规则
 
@@ -133,8 +137,9 @@ class AtlasBrain:
             'write_file': self.tools.write_file,
             'read_file': self.tools.read_file,
             'list_directory': self.tools.list_directory,
-            'execute_python': self.tools.execute_python,  # 新增
-
+            'execute_python': self.tools.execute_python,
+            'read_web_content': self.tools.read_web_content,
+            'list_web_resources': self.tools.list_web_resources,
         }
 
         if action in tool_map:

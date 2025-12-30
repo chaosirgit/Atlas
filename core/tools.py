@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 from typing import Dict, Any
 from .code_executor import CodeExecutor
-
+from . import web_reader
 
 
 class AtlasTools:
@@ -22,6 +22,14 @@ class AtlasTools:
         if not str(target).startswith(str(self.workspace.resolve())):
             raise ValueError(f"路径越界: {path}")
         return target
+    
+    def read_web_content(self, url: str) -> Dict[str, Any]:
+        """读取网页的主要文本内容"""
+        return web_reader.read_web_content(url)
+
+    def list_web_resources(self, url: str) -> Dict[str, Any]:
+        """列出网页引用的所有资源"""
+        return web_reader.list_web_resources(url)
 
     def create_directory(self, path: str) -> Dict[str, Any]:
         """创建目录"""
