@@ -2,10 +2,11 @@ import os
 import shutil
 from pathlib import Path
 from typing import Dict, Any, Optional
-from .code_executor import CodeExecutor
-from . import web_reader
-from . import location
-from . import weather
+
+from .tools.code_executor import CodeExecutor
+from .tools import web_reader
+from .tools import location
+from .tools import weather
 
 
 class AtlasTools:

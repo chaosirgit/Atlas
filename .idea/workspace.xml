@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bb8fcd5e-745a-4577-8518-f286d5a7aced" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/atlas_workspace/memory/embeddings.npy" beforeDir="false" afterPath="$PROJECT_DIR$/atlas_workspace/memory/embeddings.npy" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atlas_workspace/memory/long_term_memory.json" beforeDir="false" afterPath="$PROJECT_DIR$/atlas_workspace/memory/long_term_memory.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atlas_workspace/memory/short_term_memory.json" beforeDir="false" afterPath="$PROJECT_DIR$/atlas_workspace/memory/short_term_memory.json" afterDir="false" />
-    </list>
+    <list default="true" id="bb8fcd5e-745a-4577-8518-f286d5a7aced" name="更改" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
