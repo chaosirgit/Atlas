@@ -1,0 +1,131 @@
+import os
+import shutil
+from pathlib import Path
+from typing import Dict, Any
+from .code_executor import CodeExecutor
+
+
+
+class AtlasTools:
+    """Atlas的工具集"""
+
+    def __init__(self, workspace: str = "./atlas_workspace"):
+        """初始化工具，设置工作空间"""
+        self.workspace = Path(workspace)
+        self.workspace.mkdir(exist_ok=True)
+        self.code_executor = CodeExecutor()  # 新增
+
+
+    def _get_safe_path(self, path: str) -> Path:
+        """确保路径在工作空间内，防止越界操作"""
+        target = (self.workspace / path).resolve()
+        if not str(target).startswith(str(self.workspace.resolve())):
+            raise ValueError(f"路径越界: {path}")
+        return target
+
+    def create_directory(self, path: str) -> Dict[str, Any]:
+        """创建目录"""
+        try:
+            target = self._get_safe_path(path)
+            target.mkdir(parents=True, exist_ok=True)
+            return {"success": True, "message": f"目录创建成功: {path}"}
+        except Exception as e:
+            return {"success": False, "message": f"创建失败: {str(e)}"}
+
+    def delete_directory(self, path: str) -> Dict[str, Any]:
+        """删除目录"""
+        try:
+            target = self._get_safe_path(path)
+            if target.exists() and target.is_dir():
+                shutil.rmtree(target)
+                return {"success": True, "message": f"目录删除成功: {path}"}
+            return {"success": False, "message": "目录不存在"}
+        except Exception as e:
+            return {"success": False, "message": f"删除失败: {str(e)}"}
+
+    def create_file(self, path: str, content: str = "") -> Dict[str, Any]:
+        """创建文件"""
+        try:
+            target = self._get_safe_path(path)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding='utf-8')
+            return {"success": True, "message": f"文件创建成功: {path}"}
+        except Exception as e:
+            return {"success": False, "message": f"创建失败: {str(e)}"}
+
+    def delete_file(self, path: str) -> Dict[str, Any]:
+        """删除文件"""
+        try:
+            target = self._get_safe_path(path)
+            if target.exists() and target.is_file():
+                target.unlink()
+                return {"success": True, "message": f"文件删除成功: {path}"}
+            return {"success": False, "message": "文件不存在"}
+        except Exception as e:
+            return {"success": False, "message": f"删除失败: {str(e)}"}
+
+    def move_directory(self, src: str, dst: str) -> Dict[str, Any]:
+        """移动目录"""
+        try:
+            src_path = self._get_safe_path(src)
+            dst_path = self._get_safe_path(dst)
+            shutil.move(str(src_path), str(dst_path))
+            return {"success": True, "message": f"目录移动成功: {src} -> {dst}"}
+        except Exception as e:
+            return {"success": False, "message": f"移动失败: {str(e)}"}
+
+    def move_file(self, src: str, dst: str) -> Dict[str, Any]:
+        """移动文件"""
+        try:
+            src_path = self._get_safe_path(src)
+            dst_path = self._get_safe_path(dst)
+            dst_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(src_path), str(dst_path))
+            return {"success": True, "message": f"文件移动成功: {src} -> {dst}"}
+        except Exception as e:
+            return {"success": False, "message": f"移动失败: {str(e)}"}
+
+    def write_file(self, path: str, content: str, mode: str = "w") -> Dict[str, Any]:
+        """写入文件 (mode: 'w'覆盖, 'a'追加)"""
+        try:
+            target = self._get_safe_path(path)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with open(target, mode, encoding='utf-8') as f:
+                f.write(content)
+            return {"success": True, "message": f"文件写入成功: {path}"}
+        except Exception as e:
+            return {"success": False, "message": f"写入失败: {str(e)}"}
+
+    def read_file(self, path: str) -> Dict[str, Any]:
+        """读取文件"""
+        try:
+            target = self._get_safe_path(path)
+            if not target.exists():
+                return {"success": False, "message": "文件不存在"}
+            content = target.read_text(encoding='utf-8')
+            return {"success": True, "content": content, "message": f"文件读取成功: {path}"}
+        except Exception as e:
+            return {"success": False, "message": f"读取失败: {str(e)}"}
+
+    def list_directory(self, path: str = ".") -> Dict[str, Any]:
+        """列出目录内容"""
+        try:
+            target = self._get_safe_path(path)
+            if not target.exists():
+                return {"success": False, "message": "目录不存在"}
+
+            items = []
+            for item in target.iterdir():
+                items.append({
+                    "name": item.name,
+                    "type": "dir" if item.is_dir() else "file",
+                    "size": item.stat().st_size if item.is_file() else 0
+                })
+
+            return {"success": True, "items": items, "message": f"目录列表: {path}"}
+        except Exception as e:
+            return {"success": False, "message": f"列表失败: {str(e)}"}
+
+    def execute_python(self, code: str) -> Dict[str, Any]:
+        """执行Python代码"""
+        return self.code_executor.execute(code)

@@ -1,0 +1,16 @@
+[project]
+name = "atlas"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "dashscope>=1.25.5",
+    "httpx>=0.28.1",
+    "numpy>=2.0.2",
+    "python-dotenv>=1.2.1",
+    "requests>=2.32.5",
+    "selenium>=4.36.0",
+    "timeout-decorator>=0.5.0",
+]
