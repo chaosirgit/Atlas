@@ -13,4 +13,5 @@ dependencies = [
     "requests>=2.32.5",
     "selenium>=4.36.0",
     "timeout-decorator>=0.5.0",
+    "flask>=3.0.3",
 ]

@@ -98,45 +98,50 @@ class AtlasBrain:
         final_answer = self._call_qwen("你是一个善于总结的AI助手。", summary_prompt)
         return final_answer
 
-    def think(self, user_input: str) -> str:
+    def think(self, user_input: str) -> Dict[str, Any]:
         """
         Atlas的核心思考循环: 规划 -> 执行 -> 总结
+        返回一个包含 'answer' 和 'logs' 的字典.
         """
+        logs = []
+        
         # 1. 规划
-        print("🤔 正在分析和规划任务...")
+        logs.append("🤔 正在分析和规划任务...")
         plan = self._get_plan(user_input)
         self.memory.add_message('user', user_input)
 
         # 2. 执行
         if plan == "simple_task":
-            print("📝 任务简单, 直接执行...")
+            logs.append("📝 任务简单, 直接执行...")
             result = self._execute_step(user_input)
             
-            # 对于简单任务, 如果有工具输出则格式化, 否则直接返回AI回复
             if result and result.get('output'):
                  final_answer = result['output']
             else:
                  final_answer = "任务已执行, 但无明确输出."
+            logs.append(f"✅ 结果: {final_answer}")
+
         else:
-            print(f"🗺️ 好的, 我已经制定了计划, 共 {len(plan)} 步.")
+            logs.append(f"🗺️ 好的, 我已经制定了计划, 共 {len(plan)} 步.")
             step_results = []
             context = f"原始任务: {user_input}\n"
 
             for i, step in enumerate(plan):
-                print(f"\n第 {i+1}/{len(plan)} 步: {step}")
+                log_step = f"\n第 {i+1}/{len(plan)} 步: {step}"
+                logs.append(log_step)
+                
                 result = self._execute_step(step, context)
                 
-                # 更新上下文, 为下一步提供信息
                 step_results.append({"step": step, "result": result})
                 context += f"第{i+1}步({step})已完成, 结果: {json.dumps(result, ensure_ascii=False)}\n"
-                print(f"✅ 第 {i+1} 步完成.")
+                logs.append(f"✅ 第 {i+1} 步完成. 结果: {json.dumps(result, ensure_ascii=False, indent=2)}")
 
             # 3. 总结
-            print("\n✅ 所有步骤已完成, 正在总结最终结果...")
+            logs.append("\n✅ 所有步骤已完成, 正在总结最终结果...")
             final_answer = self._summarize_results(user_input, step_results)
 
         self.memory.add_message('assistant', final_answer)
-        return final_answer
+        return {"answer": final_answer, "logs": logs}
 
     def _parse_tool_call(self, response: str) -> List[Dict[str, Any]]:
         """解析AI返回的工具调用"""
@@ -174,6 +179,7 @@ class AtlasBrain:
         }
         if action in tool_map:
             if self.debug:
+                # 这个print可以保留,因为它在Flask的控制台输出,而不是给前端
                 print(f"🔧 执行工具: {action} ({params})")
             return tool_map[action](**params)
         return {"success": False, "message": f"未知工具: {action}"}
