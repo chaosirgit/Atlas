@@ -7,8 +7,6 @@ from .memory import Memory
 from .tool_manager import AtlasTools
 from .config import PLANNER_SYSTEM_PROMPT, EXECUTOR_SYSTEM_PROMPT
 
-dashscope.api_key = os.getenv('DASHSCOPE_API_KEY')
-
 
 class AtlasBrain:
     """
@@ -19,6 +17,7 @@ class AtlasBrain:
         self.memory = Memory()
         self.tools = AtlasTools()
         self.debug = debug
+        dashscope.api_key = os.getenv('DASHSCOPE_API_KEY') # Moved here
 
     def _call_qwen(self, system_prompt: str, user_prompt: str, history: List[Dict] = None) -> str:
         """通用的千问调用函数"""
@@ -115,10 +114,17 @@ class AtlasBrain:
             logs.append("📝 任务简单, 直接执行...")
             result = self._execute_step(user_input)
             
-            if result and result.get('output'):
-                 final_answer = result['output']
+            # 尝试从result中提取最相关的输出作为最终答案
+            if result and result.get('answer'): # 优先提取 Tavily 的 'answer'
+                final_answer = result['answer']
+            elif result and result.get('output'): # 其次提取 'output' (如代码执行结果)
+                final_answer = result['output']
+            elif result and result.get('message'): # 再次提取 'message'
+                final_answer = result['message']
+            elif result and result.get('results'): # 如果有搜索结果, 也可以显示
+                final_answer = f"找到了一些结果:\n{json.dumps(result['results'], ensure_ascii=False, indent=2)}"
             else:
-                 final_answer = "任务已执行, 但无明确输出."
+                final_answer = "任务已执行, 但无明确输出."
             logs.append(f"✅ 结果: {final_answer}")
 
         else:
@@ -174,6 +180,7 @@ class AtlasBrain:
             'execute_python': self.tools.execute_python,
             'read_web_content': self.tools.read_web_content,
             'list_web_resources': self.tools.list_web_resources,
+            'web_search': self.tools.web_search,
             'get_current_location': self.tools.get_current_location,
             'get_weather': self.tools.get_weather,
         }

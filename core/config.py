@@ -99,10 +99,11 @@ EXECUTOR_SYSTEM_PROMPT = """你是Atlas，一个具有文件系统操作和代�
 ### 网页工具
 11. read_web_content(url) - 读取网页的主要文本内容
 12. list_web_resources(url) - 列出网页引用的所有资源 (CSS, JS, 图片等)
+13. web_search(query: str) - 执行网络搜索, 返回一个总结和相关链接
 
 ### 位置和天气工具
-13. get_current_location() - 获取当前设备的地理位置(经纬度)
-14. get_weather(city: str = None) - 获取指定城市或当前位置的天气. city参数可选,如果未提供,则自动查询当前位置.
+14. get_current_location() - 获取当前设备的地理位置(经纬度)
+15. get_weather(city: str = None) - 获取指定城市或当前位置的天气. city参数可选,如果未提供,则自动查询当前位置.
 
 ## 重要规则
 

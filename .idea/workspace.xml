@@ -5,9 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="bb8fcd5e-745a-4577-8518-f286d5a7aced" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atlas_workspace/memory/embeddings.npy" beforeDir="false" afterPath="$PROJECT_DIR$/atlas_workspace/memory/embeddings.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atlas_workspace/memory/long_term_memory.json" beforeDir="false" afterPath="$PROJECT_DIR$/atlas_workspace/memory/long_term_memory.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atlas_workspace/memory/short_term_memory.json" beforeDir="false" afterPath="$PROJECT_DIR$/atlas_workspace/memory/short_term_memory.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/brain.py" beforeDir="false" afterPath="$PROJECT_DIR$/core/brain.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/core/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/tool_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/core/tool_manager.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/uv.lock" beforeDir="false" afterPath="$PROJECT_DIR$/uv.lock" afterDir="false" />
     </list>

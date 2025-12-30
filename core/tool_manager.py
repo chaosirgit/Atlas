@@ -7,7 +7,7 @@ from .tools.code_executor import CodeExecutor
 from .tools import web_reader
 from .tools import location
 from .tools import weather
-
+from .tools import web_search
 
 class AtlasTools:
     """Atlas的工具集"""
@@ -33,6 +33,10 @@ class AtlasTools:
     def list_web_resources(self, url: str) -> Dict[str, Any]:
         """列出网页引用的所有资源"""
         return web_reader.list_web_resources(url)
+
+    def web_search(self, query: str) -> Dict[str, Any]:
+        """执行网络搜索"""
+        return web_search.search(query)
 
     def get_current_location(self) -> Dict[str, Any]:
         """获取当前设备的地理位置(经纬度)"""
