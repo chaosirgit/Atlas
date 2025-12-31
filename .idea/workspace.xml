@@ -6,9 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="bb8fcd5e-745a-4577-8518-f286d5a7aced" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/self_evolution/capabilities.json" beforeDir="false" afterPath="$PROJECT_DIR$/core/self_evolution/capabilities.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/self_evolution/capability_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/core/self_evolution/capability_manager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
