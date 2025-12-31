@@ -15,4 +15,5 @@ dependencies = [
     "timeout-decorator>=0.5.0",
     "flask>=3.0.3",
     "tavily-python>=0.7.17",
+    "openai>=2.14.0",
 ]
