@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response
 from dotenv import load_dotenv
 from core.brain import AtlasBrain
 
@@ -41,6 +41,28 @@ def think():
         import traceback
         traceback.print_exc()
         return jsonify({"error": "大脑在思考时遇到了一个内部错误"}), 500
+
+@app.route('/chat-stream') # Changed to GET by default, removed methods=['POST']
+def chat_stream():
+    """处理用户输入并使用SSE流式返回Atlas的思考过程"""
+    user_message = request.args.get('message') # Read from query parameter
+
+    if not user_message:
+        # This will be caught by the frontend EventSource.onerror
+        return Response("Missing message", status=400)
+
+    def generate():
+        try:
+            for event_json in atlas_brain.think_stream(user_message):
+                yield f"data: {event_json}\n\n"
+        except Exception as e:
+            print(f"Error during stream generation: {e}")
+            import traceback
+            traceback.print_exc()
+            error_event = {"type": "error", "data": "流式处理时发生服务器错误"}
+            yield f"data: {json.dumps(error_event)}\n\n"
+
+    return Response(generate(), mimetype='text/event-stream')
 
 if __name__ == '__main__':
     # 使用 threaded=True 确保在处理请求时UI不会被阻塞

@@ -201,6 +201,85 @@ class AtlasBrain:
 
         return {"answer": final_answer, "logs": logs}
 
+    def think_stream(self, user_input: str):
+        """
+        Atlas的核心思考循环的流式版本: 规划 -> 执行 -> 总结
+        以生成器方式逐步产出日志和最终结果.
+        """
+        def stream_event(type: str, data: Any):
+            return json.dumps({"type": type, "data": data}, ensure_ascii=False)
+
+        try:
+            # 1. 规划
+            yield stream_event("log", "🤔 正在分析和规划任务...")
+            plan = self._get_plan(user_input)
+            self.memory.add_message('user', user_input)
+
+            # 2. 执行
+            if plan == "simple_task":
+                yield stream_event("log", "📝 任务被判定为简单任务, 启动持续对话模式...")
+                
+                context = f"原始任务: {user_input}\n"
+                final_answer = ""
+                max_turns = 5
+
+                for i in range(max_turns):
+                    yield stream_event("log", f"--- 思考回合 {i+1} ---")
+                    
+                    user_prompt = f"上下文:\n{context}\n\n当前任务: {user_input}\n\n请根据上下文, 判断是应该继续调用工具, 还是已经可以回答原始任务了. 如果能回答, 请直接给出最终答案, 不要再输出JSON."
+                    ai_response_str = self._call_qwen(EXECUTOR_SYSTEM_PROMPT, user_prompt)
+                    
+                    tool_calls = self._parse_tool_call(ai_response_str)
+                    
+                    if not tool_calls:
+                        final_answer = ai_response_str
+                        yield stream_event("log", "✅ AI认为任务已完成, 生成最终回答.")
+                        break
+                    
+                    # 执行工具
+                    for tool_call in tool_calls:
+                        yield stream_event("log", f"🔧 准备执行工具: {tool_call.get('action')}")
+                        result = self._execute_tool(tool_call)
+                        context += f"在第{i+1}回合, 调用了工具 '{tool_call.get('action')}', 结果是: {json.dumps(result, ensure_ascii=False)}\n"
+                        yield stream_event("log", f"工具执行结果: {json.dumps(result, ensure_ascii=False, indent=2)}")
+                
+                if not final_answer:
+                    final_answer = "我已经执行了多次操作, 但似乎仍未得出最终结论. 您可以尝试更明确地提出您的问题."
+                    yield stream_event("log", "⚠️ 已达到最大思考回合, 终止任务.")
+
+            else:
+                yield stream_event("log", f"🗺️ 好的, 我已经制定了计划, 共 {len(plan)} 步.")
+                step_results = []
+                context = f"原始任务: {user_input}\n"
+
+                for i, step in enumerate(plan):
+                    log_step = f"\n第 {i+1}/{len(plan)} 步: {step}"
+                    yield stream_event("log", log_step)
+                    
+                    result = self._execute_step(step, context)
+                    
+                    step_results.append({"step": step, "result": result})
+                    context += f"第{i+1}步({step})已完成, 结果: {json.dumps(result, ensure_ascii=False)}\n"
+                    yield stream_event("log", f"✅ 第 {i+1} 步完成. 结果: {json.dumps(result, ensure_ascii=False, indent=2)}")
+
+                # 3. 总结
+                yield stream_event("log", "\n✅ 所有步骤已完成, 正在总结最终结果...")
+                final_answer = self._summarize_results(user_input, step_results)
+
+            self.memory.add_message('assistant', final_answer)
+            yield stream_event("final_answer", final_answer)
+            
+            # 4. 反思
+            # 在返回结果后, 悄悄进行一次反思, 看是否需要记忆新的事实
+            self._reflection_step(user_input, final_answer)
+
+        except Exception as e:
+            if self.debug:
+                import traceback
+                traceback.print_exc()
+            yield stream_event("error", f"大脑在思考时遇到了一个内部错误: {str(e)}")
+
+
     def _reflection_step(self, user_input: str, assistant_answer: str):
         """第四步: 反思对话, 决定是否需要记忆新知识"""
         if self.debug:
