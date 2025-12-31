@@ -5,7 +5,8 @@ import dashscope
 from dashscope import Generation
 from .memory import Memory
 from .tool_manager import AtlasTools
-from .config import PLANNER_SYSTEM_PROMPT, EXECUTOR_SYSTEM_PROMPT
+from .config import PLANNER_SYSTEM_PROMPT, EXECUTOR_SYSTEM_PROMPT, REFLECT_AND_REMEMBER_PROMPT
+from .tools.knowledge import _load_kb # 导入知识库加载函数
 
 
 class AtlasBrain:
@@ -17,18 +18,39 @@ class AtlasBrain:
         self.memory = Memory()
         self.tools = AtlasTools()
         self.debug = debug
-        dashscope.api_key = os.getenv('DASHSCOPE_API_KEY') # Moved here
+        dashscope.api_key = os.getenv('DASHSCOPE_API_KEY')
+        self.knowledge_base = _load_kb() # 初始化时加载知识库
+
+    def _get_kb_context_string(self) -> str:
+        """将知识库格式化为字符串, 以便注入到Prompt"""
+        if not self.knowledge_base:
+            return ""
+        
+        context = "--- 知识库 ---\n"
+        for key, value in self.knowledge_base.items():
+            context += f"- {key}: {value}\n"
+        context += "---------------\n"
+        return context
 
     def _call_qwen(self, system_prompt: str, user_prompt: str, history: List[Dict] = None) -> str:
         """通用的千问调用函数"""
+        # 注入知识库上下文
+        kb_context = self._get_kb_context_string()
+        
         messages = [{'role': 'system', 'content': system_prompt}]
+        if kb_context:
+            messages.append({'role': 'system', 'content': kb_context})
+        
         if history:
             messages.extend(history)
         messages.append({'role': 'user', 'content': user_prompt})
 
         if self.debug:
             print(f"\n{'='*20} QWEN CALL {'='*20}")
-            print(f"SYSTEM: {system_prompt[:100]}...")
+            # 打印完整的System Prompt以便调试
+            for msg in messages:
+                if msg['role'] == 'system':
+                    print(f"SYSTEM: {msg['content'][:300]}...")
             print(f"USER: {user_prompt}")
             print(f"{'='*50}\n")
 
@@ -81,6 +103,12 @@ class AtlasBrain:
         for tool_call in tool_calls:
             tool_result = self._execute_tool(tool_call)
             results.append(tool_result)
+            
+            # 如果知识库被修改,立即重新加载以保证上下文同步
+            if tool_call.get('action') in ['remember', 'forget'] and tool_result.get('success'):
+                self.knowledge_base = _load_kb()
+                if self.debug:
+                    print("🧠 知识库已更新!")
         
         # 目前只简单返回第一个工具的结果, 将来可以优化
         return results[0] 
@@ -111,21 +139,40 @@ class AtlasBrain:
 
         # 2. 执行
         if plan == "simple_task":
-            logs.append("📝 任务简单, 直接执行...")
-            result = self._execute_step(user_input)
+            logs.append("📝 任务被判定为简单任务, 启动持续对话模式...")
             
-            # 尝试从result中提取最相关的输出作为最终答案
-            if result and result.get('answer'): # 优先提取 Tavily 的 'answer'
-                final_answer = result['answer']
-            elif result and result.get('output'): # 其次提取 'output' (如代码执行结果)
-                final_answer = result['output']
-            elif result and result.get('message'): # 再次提取 'message'
-                final_answer = result['message']
-            elif result and result.get('results'): # 如果有搜索结果, 也可以显示
-                final_answer = f"找到了一些结果:\n{json.dumps(result['results'], ensure_ascii=False, indent=2)}"
-            else:
-                final_answer = "任务已执行, 但无明确输出."
-            logs.append(f"✅ 结果: {final_answer}")
+            # 对于简单任务, 我们启动一个ReAct循环, 直到获得最终答案
+            context = f"原始任务: {user_input}\n"
+            final_answer = ""
+            max_turns = 5 # 防止无限循环
+            
+            for i in range(max_turns):
+                logs.append(f"--- 思考回合 {i+1} ---")
+                
+                # 在这个模式下,我们直接使用Executor,并把之前的步骤作为上下文
+                user_prompt = f"上下文:\n{context}\n\n当前任务: {user_input}\n\n请根据上下文, 判断是应该继续调用工具, 还是已经可以回答原始任务了. 如果能回答, 请直接给出最终答案, 不要再输出JSON."
+                
+                ai_response_str = self._call_qwen(EXECUTOR_SYSTEM_PROMPT, user_prompt)
+                
+                # 尝试解析工具调用
+                tool_calls = self._parse_tool_call(ai_response_str)
+                
+                if not tool_calls:
+                    # 如果没有工具调用, 我们认为这是最终答案
+                    final_answer = ai_response_str
+                    logs.append(f"✅ AI认为任务已完成, 生成最终回答.")
+                    break
+                
+                # 执行工具
+                for tool_call in tool_calls:
+                    logs.append(f"🔧 准备执行工具: {tool_call.get('action')}")
+                    result = self._execute_tool(tool_call)
+                    context += f"在第{i+1}回合, 调用了工具 '{tool_call.get('action')}', 结果是: {json.dumps(result, ensure_ascii=False)}\n"
+                    logs.append(f"工具执行结果: {json.dumps(result, ensure_ascii=False, indent=2)}")
+            
+            if not final_answer:
+                final_answer = "我已经执行了多次操作, 但似乎仍未得出最终结论. 您可以尝试更明确地提出您的问题."
+                logs.append("⚠️ 已达到最大思考回合, 终止任务.")
 
         else:
             logs.append(f"🗺️ 好的, 我已经制定了计划, 共 {len(plan)} 步.")
@@ -147,7 +194,49 @@ class AtlasBrain:
             final_answer = self._summarize_results(user_input, step_results)
 
         self.memory.add_message('assistant', final_answer)
+        
+        # 4. 反思
+        # 在返回结果后, 悄悄进行一次反思, 看是否需要记忆新的事实
+        self._reflection_step(user_input, final_answer)
+
         return {"answer": final_answer, "logs": logs}
+
+    def _reflection_step(self, user_input: str, assistant_answer: str):
+        """第四步: 反思对话, 决定是否需要记忆新知识"""
+        if self.debug:
+            print("\n🤔 正在反思对话, 检查是否有新知识需要记忆...")
+
+        prompt = f"""对话:
+User: {user_input}
+Assistant: {assistant_answer}
+"""
+        
+        # 调用Qwen判断是否需要记忆
+        response = self._call_qwen(REFLECT_AND_REMEMBER_PROMPT, prompt)
+        
+        # 解析响应, 看是否有remember工具调用
+        tool_calls = self._parse_tool_call(response)
+        
+        if not tool_calls:
+            if self.debug:
+                print("💡 无新知识需要记忆.")
+            return
+
+        if self.debug:
+            print(f"💡 发现新知识, 准备记忆 {len(tool_calls)} 条...")
+            
+        for tool_call in tool_calls:
+            if tool_call.get("action") == "remember":
+                tool_result = self._execute_tool(tool_call)
+                # 如果记忆成功, 立即更新当前大脑中的知识库
+                if tool_result.get("success"):
+                    self.knowledge_base = _load_kb()
+                    if self.debug:
+                        print(f"🧠 知识库已更新: {tool_call['parameters']}")
+                else:
+                    if self.debug:
+                        print(f"⚠️ 记忆失败: {tool_result.get('message')}")
+
 
     def _parse_tool_call(self, response: str) -> List[Dict[str, Any]]:
         """解析AI返回的工具调用"""

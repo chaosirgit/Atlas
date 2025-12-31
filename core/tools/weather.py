@@ -2,13 +2,13 @@ import os
 import requests
 from typing import Dict, Any, Optional
 
-AMAP_API_KEY = os.getenv("AMAP_API_KEY")
 BASE_URL = "https://restapi.amap.com/v3"
 
 def _make_amap_request(endpoint: str, params: Dict[str, Any]) -> Dict[str, Any]:
     """
     向高德地图API发起请求的通用函数.
     """
+    AMAP_API_KEY = os.getenv("AMAP_API_KEY")
     if not AMAP_API_KEY or "your_amap_api_key" in AMAP_API_KEY:
         return {"success": False, "message": "高德API Key未配置或无效"}
 
